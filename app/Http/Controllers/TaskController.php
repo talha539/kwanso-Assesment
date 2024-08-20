@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 class TaskController extends Controller
 {
     /**
@@ -58,10 +59,12 @@ class TaskController extends Controller
             // Find the task or fail if not found
             $task = Task::where('id', $id)
                 ->where(function ($query) {
-                    $query->where('user_id', auth()->id())
-                        ->orWhereHas('user', function ($q) {
-                            $q->where('role', 'admin');
-                        });
+                    if (auth()->user()->role === 'admin') {
+                        return;
+                    } else {
+                        // Otherwise, restrict access to tasks owned by the authenticated user
+                        $query->where('user_id', auth()->id());
+                    }
                 })
                 ->firstOrFail();
 
@@ -101,10 +104,12 @@ class TaskController extends Controller
             // Find the task or fail if not found
             $task = Task::where('id', $id)
                 ->where(function ($query) {
-                    $query->where('user_id', auth()->id())
-                        ->orWhereHas('user', function ($q) {
-                            $q->where('role', 'admin');
-                        });
+                    if (auth()->user()->role === 'admin') {
+                        return;
+                    } else {
+                        // Otherwise, restrict access to tasks owned by the authenticated user
+                        $query->where('user_id', auth()->id());
+                    }
                 })
                 ->firstOrFail();
 
@@ -112,7 +117,6 @@ class TaskController extends Controller
             $task->update($request->only(['title', 'description', 'status']));
 
             return response()->json($task);
-
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Task not found or you do not have permission to update it.'], 404);
         } catch (\Exception $e) {
@@ -130,13 +134,17 @@ class TaskController extends Controller
     public function destroy($id)
     {
         try {
+
             // Find the task or fail if not found
             $task = Task::where('id', $id)
                 ->where(function ($query) {
-                    $query->where('user_id', auth()->id())
-                        ->orWhereHas('user', function ($q) {
-                            $q->where('role', 'admin');
-                        });
+                    // If the authenticated user is an admin, allow access to any task
+                    if (auth()->user()->role === 'admin') {
+                        return;
+                    } else {
+                        // Otherwise, restrict access to tasks owned by the authenticated user
+                        $query->where('user_id', auth()->id());
+                    }
                 })
                 ->firstOrFail();
 
@@ -145,7 +153,6 @@ class TaskController extends Controller
 
             // Return success message
             return response()->json(['message' => 'Task deleted successfully']);
-            
         } catch (ModelNotFoundException $e) {
             // Return error message if task not found or permission issue
             return response()->json(['message' => 'Task not found or you do not have permission to delete it.'], 404);
